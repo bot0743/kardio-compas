@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>SHAP-отчёт | Объяснение прогноза — КардиоКомпас</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #eef3fc;
+            font-family: 'Inter', sans-serif;
+            padding: 40px 24px;
+            color: #1a3448;
+        }
+
+        .report-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0, 20, 40, 0.15);
+            overflow: hidden;
+            border: 1px solid #e2edf5;
+        }
+
+        /* хедер отчёта */
+        .report-header {
+            background: linear-gradient(135deg, #f9fcff, #ffffff);
+            padding: 28px 32px;
+            border-bottom: 1px solid #e2edf5;
+        }
+        .badge-shap {
+            display: inline-block;
+            background: #eef2fa;
+            border-radius: 40px;
+            padding: 5px 14px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #1e6f9f;
+            margin-bottom: 16px;
+        }
+        .patient-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #174b6b;
+            margin-bottom: 8px;
+        }
+        .patient-meta {
+            display: flex;
+            gap: 24px;
+            font-size: 0.85rem;
+            color: #5a7f9c;
+            margin-top: 8px;
+        }
+        .risk-badge {
+            background: #fdefe8;
+            border-radius: 60px;
+            padding: 8px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            margin-top: 16px;
+        }
+        .risk-value {
+            font-size: 1.5rem;
+            color: #bc4e2e;
+        }
+
+        /* основное содержание */
+        .report-body {
+            padding: 28px 32px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1a4e6e;
+            border-left: 4px solid #e69b8a;
+            padding-left: 14px;
+            margin: 28px 0 20px 0;
+        }
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        /* waterfall имитация */
+        .waterfall-mock {
+            background: #fafdff;
+            border-radius: 24px;
+            padding: 20px;
+            border: 1px solid #e5edf4;
+            margin-bottom: 20px;
+        }
+        .waterfall-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .feature-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .feature-name {
+            width: 200px;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .bar-container {
+            flex: 1;
+            height: 32px;
+            background: #edf2f8;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-positive {
+            background: #d9704a;   /* красновато-оранжевый для увеличения риска */
+            height: 100%;
+            border-radius: 20px;
+            width: 0%;
+            transition: width 0.2s;
+        }
+        .bar-negative {
+            background: #64a5b9;   /* голубоватый для снижения риска */
+            height: 100%;
+            border-radius: 20px;
+            width: 0%;
+            margin-left: auto;
+        }
+        .shap-value {
+            width: 70px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: right;
+        }
+        .positive {
+            color: #bc4e2e;
+        }
+        .negative {
+            color: #2e7d64;
+        }
+
+        /* матрица признаков в виде таблицы */
+        .features-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .features-table th {
+            text-align: left;
+            padding: 14px 16px;
+            background: #f5f9fe;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #2a6285;
+            border-bottom: 1px solid #e0ecf5;
+        }
+        .features-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #eff3f9;
+            font-size: 0.85rem;
+        }
+        .impact-up {
+            color: #c95a3c;
+            font-weight: 600;
+        }
+        .impact-down {
+            color: #318f74;
+            font-weight: 600;
+        }
+
+        /* карточка клинической интерпретации */
+        .interpret-box {
+            background: #f4fafd;
+            border-radius: 20px;
+            padding: 20px 24px;
+            margin: 24px 0 20px;
+            border-left: 5px solid #c97f64;
+        }
+        .rec-box {
+            background: #fef7f2;
+            border-radius: 20px;
+            padding: 18px 24px;
+            margin-top: 24px;
+            border: 1px solid #f0e0d6;
+        }
+
+        .footer-note {
+            font-size: 0.7rem;
+            text-align: center;
+            padding: 20px 32px 28px;
+            color: #7f9cbd;
+            border-top: 1px solid #eef3fa;
+        }
+
+        @media (max-width: 700px) {
+            .report-body {
+                padding: 20px;
+            }
+            .feature-name {
+                width: 150px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="report-container">
+    <!-- Header с данными пациента -->
+    <div class="report-header">
+        <div class="badge-shap">🧠 SHAP-объяснение · ML Predictor (CatBoost)</div>
+        <div class="patient-title">Пациент: Владимир Петрович С.</div>
+        <div class="patient-meta">
+            <span>🆔 ID: CRD-4821</span>
+            <span>📅 Дата прогноза: 02.06.2026, 08:42</span>
+            <span>📊 Горизонт: 24 часа</span>
+        </div>
+        <div class="risk-badge">
+            <span>⚠️ Прогнозируемый риск декомпенсации ХСН:</span>
+            <span class="risk-value">87%</span>
+            <span style="font-size:0.75rem;">(высокий)</span>
+        </div>
+    </div>
+
+    <div class="report-body">
+        <!-- waterfall plot (визуализация вкладов) -->
+        <div class="section-title">📊 Вклад признаков в прогноз (SHAP waterfall)</div>
+        <div class="waterfall-mock">
+            <div class="waterfall-bars">
+                <!-- каждое правило отображается как bar, отражающий величину SHAP -->
+                <div class="feature-row">
+                    <div class="feature-name">🌡️ Увеличение веса (2 дня)</div>
+                    <div class="bar-container"><div class="bar-positive" style="width: 88%;"></div></div>
+                    <div class="shap-value positive">+0.34</div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-name">💓 Снижение SDNN (ВСР)</div>
+                    <div class="bar-container"><div class="bar-positive" style="width: 72%;"></div></div>
+                    <div class="shap-value positive">+0.28</div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-name">🩸 Утреннее систолическое АД &lt; 100 мм рт.ст.</div>
+                    <div class="bar-container"><div class="bar-positive" style="width: 49%;"></div></div>
+                    <div class="shap-value positive">+0.19</div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-name">💊 Приверженность терапии (дневник)</div>
+                    <div class="bar-container"><div class="bar-negative" style="width: 21%; background:#64a5b9;"></div></div>
+                    <div class="shap-value negative">-0.08</div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-name">📈 Темп роста ЧСС (ночные часы)</div>
+                    <div class="bar-container"><div class="bar-positive" style="width: 38%;"></div></div>
+                    <div class="shap-value positive">+0.15</div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-name">⚖️ Индекс массы тела (базовый)</div>
+                    <div class="bar-container"><div class="bar-positive" style="width: 12%;"></div></div>
+                    <div class="shap-value positive">+0.05</div>
+                </div>
+                <div class="feature-row" style="margin-top: 12px; border-top: 1px dashed #d7e2ed; padding-top: 12px;">
+                    <div class="feature-name"><strong>Базовое значение (expected value)</strong></div>
+                    <div class="bar-container"></div>
+                    <div class="shap-value">0.36</div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-name"><strong>Итоговый прогноз f(x)</strong></div>
+                    <div class="bar-container"></div>
+                    <div class="shap-value positive"><strong>0.87</strong></div>
+                </div>
+            </div>
+            <div style="font-size:0.7rem; margin-top: 16px; color:#5d7f9c;">
+                📐 SHAP-значения показывают вклад каждого признака относительно базового риска (0.36). Положительные значения увеличивают риск.
+            </div>
+        </div>
+
+        <!-- детализированная таблица признаков с SHAP -->
+        <div class="section-title">🔍 Детальный анализ признаков (SHAP values)</div>
+        <table class="features-table">
+            <thead>
+                <tr><th>Признак</th><th>Значение (текущее)</th><th>SHAP-вклад</th><th>Влияние на риск</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Изменение веса за 48 ч (кг)</td><td>+2.1 кг</td><td>+0.34</td><td class="impact-up">▲ повышает</td></tr>
+                <tr><td>SDNN (вариабельность ритма), мс</td><td>18 мс (снижение на 15 мс)</td><td>+0.28</td><td class="impact-up">▲ повышает</td></tr>
+                <tr><td>Систолическое АД (утро)</td><td>92 мм рт. ст.</td><td>+0.19</td><td class="impact-up">▲ повышает</td></tr>
+                <tr><td>Средняя ночная ЧСС (уд/мин)</td><td>84 уд/мин (+12 от базовой)</td><td>+0.15</td><td class="impact-up">▲ повышает</td></tr>
+                <tr><td>pNN50 (%)</td><td>4.2%</td><td>+0.10</td><td class="impact-up">▲ повышает</td></tr>
+                <tr><td>Приверженность терапии (оценка по дневнику)</td><td>75% (снижение)</td><td>-0.08</td><td class="impact-down">▼ снижает</td></tr>
+                <tr><td>Пол (мужской)</td><td>М</td><td>+0.02</td><td class="impact-up">▲ незначительно</td></tr>
+            </tbody>
+        </table>
+
+        <!-- интерпретация (клинический смысл) -->
+        <div class="interpret-box">
+            <div style="font-weight:700; margin-bottom: 12px;">🧬 Клиническая интерпретация (Explainability Service)</div>
+            <p style="margin-bottom: 10px;">Пациент демонстрирует прогрессирующую задержку жидкости (увеличение веса на 2,1 кг за 48 часов), что является ранним маркером декомпенсации ХСН. Одновременно наблюдается снижение вариабельности сердечного ритма (SDNN=18 мс), указывающее на вегетативный дисбаланс и повышенную активность симпатической нервной системы. Гипотония (утреннее АД 92 мм рт. ст.) может отражать снижение сердечного выброса.</p>
+            <p>Согласно клиническим рекомендациям РКО (2025), комбинация «прибавка веса + снижение SDNN + гипотония» ассоциируется с высоким риском госпитализации по поводу декомпенсации в ближайшие 24–48 часов.</p>
+        </div>
+
+        <!-- Рекомендация системы -->
+        <div class="rec-box">
+            <div style="font-weight:700; margin-bottom: 8px;">📋 Рекомендация системы (врачебная поддержка)</div>
+            <ul style="margin-left: 20px; color: #1a4a66;">
+                <li>✅ Усилить диуретическую терапию (контроль диуреза, ежедневное взвешивание)</li>
+                <li>🩺 Оценить уровень NT-proBNP при возможности</li>
+                <li>📞 Связаться с пациентом для уточнения комплаентности (особенно приёма бета-блокаторов)</li>
+                <li>⚕️ План: контроль АД через 6 часов, при сохранении гипотонии — коррекция гипотензивной терапии</li>
+            </ul>
+            <div style="margin-top: 12px; font-size:0.75rem; color:#6c8ead; border-top: 1px solid #eadfcb; padding-top: 10px;">
+                🔗 Основание: сработало правило ML с доверительной вероятностью 0.87 (AUC модели 0.961). Интерпретация через SHAP одобрена клиническим комитетом.
+            </div>
+        </div>
+
+        <div style="font-size:0.75rem; background:#f3f7fc; border-radius: 18px; padding: 12px 18px; margin-top: 24px;">
+            <span style="font-weight:600;">📎 Примечание Explanation Service:</span> SHAP-анализ показал, что ключевыми триггерами прогноза стали <strong>увеличение веса</strong> и <strong>снижение SDNN</strong>. Пациент относится к группе NYHA II–III, предыдущие эпизоды компенсации.
+        </div>
+    </div>
+
+    <div class="footer-note">
+        <div>🔬 SHAP-отчёт сгенерирован Explanation Service (распределённая система CDSS, Edge-Cloud)</div>
+        <div style="margin-top: 6px;">Данные на основе анонимизированной ретроспективной выборки пациентов с ХСН (СОККД, 2026). Демонстрационный прототип.</div>
+    </div>
+</div>
+</body>
+</html>
