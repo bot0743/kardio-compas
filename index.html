@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>КардиоКомпас | Система поддержки врачебных решений</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f3f6fc;   /* очень мягкий голубовато-серый, медицинский фон */
+            font-family: 'Inter', sans-serif;
+            color: #1a2c3e;
+            padding: 32px 24px;
+            line-height: 1.4;
+        }
+
+        /* Основной контейнер */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Хедер */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .logo-area h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #1E6F9F, #2C8EBB);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+        .logo-area p {
+            font-size: 0.85rem;
+            color: #4f6f8f;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+        .badge {
+            background-color: #eef2fa;
+            padding: 8px 16px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #1e6f9f;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge::before {
+            content: "🫀";
+            font-size: 1rem;
+        }
+
+        /* статистика/карточки KPI */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 24px;
+            padding: 18px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s;
+            border: 1px solid #e2edf7;
+        }
+        .kpi-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            color: #5c7f9c;
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a3e50;
+            line-height: 1.2;
+        }
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: #7e9bb5;
+            margin-top: 6px;
+        }
+
+        /* основные секции: пациенты + рекомендации */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: 28px;
+            margin-bottom: 32px;
+        }
+
+        /* карточка списка пациентов */
+        .patients-card, .recommendations-card {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e6eef5;
+            overflow: hidden;
+            box-shadow: 0 6px 14px rgba(0, 20, 40, 0.05);
+        }
+        .card-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #eef2f8;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .card-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1d4c6e;
+        }
+        .card-header span {
+            font-size: 0.8rem;
+            background: #eef3fa;
+            padding: 4px 10px;
+            border-radius: 30px;
+            color: #2c7191;
+        }
+
+        .patient-list {
+            padding: 0 8px 16px 8px;
+        }
+        .patient-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 16px;
+            border-bottom: 1px solid #f0f4fa;
+            transition: background 0.2s;
+            cursor: default;
+        }
+        .patient-row:hover {
+            background-color: #fafdff;
+        }
+        .patient-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 130px;
+        }
+        .patient-name {
+            font-weight: 600;
+            color: #1e3a4d;
+        }
+        .patient-id {
+            font-size: 0.7rem;
+            color: #8aa4bf;
+            font-family: monospace;
+        }
+        .vital-signs {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 0 10px;
+        }
+        .vital {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .vital-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #7f9cbb;
+        }
+        .vital-value {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1f5577;
+        }
+        .alert-badge {
+            background-color: #fff2f0;
+            border-radius: 40px;
+            padding: 5px 14px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #c23d2c;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .alert-badge.critical {
+            background-color: #fdebe8;
+            color: #bc3f2e;
+        }
+        .alert-badge.warning {
+            background-color: #fff0e0;
+            color: #c57f1e;
+        }
+        .risk-chip {
+            font-size: 0.7rem;
+            background: #eef2fc;
+            padding: 4px 12px;
+            border-radius: 30px;
+            white-space: nowrap;
+        }
+
+        /* рекомендации */
+        .rec-list {
+            padding: 8px 0 16px 0;
+        }
+        .rec-item {
+            padding: 18px 24px;
+            border-bottom: 1px solid #ecf3fa;
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+        .rec-icon {
+            font-size: 1.6rem;
+        }
+        .rec-content {
+            flex: 1;
+        }
+        .rec-title {
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #1e5a7a;
+        }
+        .rec-desc {
+            font-size: 0.85rem;
+            color: #40647e;
+            margin-bottom: 8px;
+        }
+        .rec-meta {
+            font-size: 0.7rem;
+            color: #8ca9c4;
+            display: flex;
+            gap: 16px;
+        }
+
+        /* графики (mock) */
+        .trend-section {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e6eef5;
+            padding: 20px 24px;
+            margin-bottom: 28px;
+        }
+        .trend-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        .trend-header h3 {
+            font-weight: 600;
+            color: #1d4c6e;
+        }
+        .mock-chart {
+            background: linear-gradient(145deg, #f9fcff, #f2f8fe);
+            border-radius: 20px;
+            height: 160px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            padding: 20px 16px 12px 16px;
+            gap: 12px;
+        }
+        .bar {
+            background: #8bb9d3;
+            width: 100%;
+            max-width: 50px;
+            border-radius: 12px 12px 8px 8px;
+            transition: 0.2s;
+            opacity: 0.8;
+        }
+        .bar.heart {
+            background: #e49a8f;
+        }
+        .bar.risk {
+            background: #75b3c9;
+        }
+
+        /* footer / пояснение */
+        .footer-note {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #8aa9c2;
+            margin-top: 40px;
+            border-top: 1px solid #e0ecf5;
+            padding-top: 24px;
+        }
+
+        @media (max-width: 1000px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            body {
+                padding: 20px 16px;
+            }
+            .vital-signs {
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- шапка -->
+    <div class="header">
+        <div class="logo-area">
+            <h1>КардиоКомпас · CDSS</h1>
+            <p>Распределенная система поддержки врачебных решений | телемониторинг ХСЗ</p>
+        </div>
+        <div class="badge">
+            <span>СОККД · Центр кардиорисков</span>
+        </div>
+    </div>
+
+    <!-- KPI-блоки (статистика) -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-title">Активных пациентов</div>
+            <div class="kpi-value">247</div>
+            <div class="kpi-sub">+12 за неделю</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Критические оповещения (24ч)</div>
+            <div class="kpi-value" style="color:#c85c4a;">3</div>
+            <div class="kpi-sub">Обработано: 100%</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Точность ML прогноза</div>
+            <div class="kpi-value">94,6%</div>
+            <div class="kpi-sub">Чувствительность █ 96%</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Средняя задержка оповещения</div>
+            <div class="kpi-value">187 мс</div>
+            <div class="kpi-sub">Edge → Cloud → Врач</div>
+        </div>
+    </div>
+
+    <!-- Секция с пациентами и активными рекомендациями -->
+    <div class="two-columns">
+        <!-- список пациентов -->
+        <div class="patients-card">
+            <div class="card-header">
+                <h2>📋 Пациенты под наблюдением</h2>
+                <span>телеметрия в реальном времени</span>
+            </div>
+            <div class="patient-list">
+                <!-- Пациент 1 -->
+                <div class="patient-row">
+                    <div class="patient-info">
+                        <div class="patient-name">Владимир Петрович С.</div>
+                        <div class="patient-id">ID: CRD-4821</div>
+                    </div>
+                    <div class="vital-signs">
+                        <div class="vital"><span class="vital-label">ЧСС</span><span class="vital-value">112</span><span style="font-size:10px;">уд/мин</span></div>
+                        <div class="vital"><span class="vital-label">АД</span><span class="vital-value">138/86</span></div>
+                        <div class="vital"><span class="vital-label">Вес (Δ)</span><span class="vital-value">+1.2 кг</span></div>
+                    </div>
+                    <div class="alert-badge critical">⚠️ Высокий риск декомпенсации</div>
+                </div>
+                <!-- Пациент 2 -->
+                <div class="patient-row">
+                    <div class="patient-info">
+                        <div class="patient-name">Елена Викторовна М.</div>
+                        <div class="patient-id">ID: CRD-1356</div>
+                    </div>
+                    <div class="vital-signs">
+                        <div class="vital"><span class="vital-label">ЧСС</span><span class="vital-value">68</span></div>
+                        <div class="vital"><span class="vital-label">АД</span><span class="vital-value">121/79</span></div>
+                        <div class="vital"><span class="vital-label">ВСР (SDNN)</span><span class="vital-value">42 мс</span></div>
+                    </div>
+                    <div class="risk-chip">✅ Стабилен</div>
+                </div>
+                <!-- Пациент 3 -->
+                <div class="patient-row">
+                    <div class="patient-info">
+                        <div class="patient-name">Алексей Игоревич К.</div>
+                        <div class="patient-id">ID: CRD-2793</div>
+                    </div>
+                    <div class="vital-signs">
+                        <div class="vital"><span class="vital-label">ЧСС</span><span class="vital-value">94</span></div>
+                        <div class="vital"><span class="vital-label">АД</span><span class="vital-value">145/92</span></div>
+                        <div class="vital"><span class="vital-label">ЭКГ</span><span class="vital-value">ФП эпизод</span></div>
+                    </div>
+                    <div class="alert-badge warning">🔄 Фибрилляция предсердий</div>
+                </div>
+                <!-- Пациент 4 -->
+                <div class="patient-row">
+                    <div class="patient-info">
+                        <div class="patient-name">Ольга Сергеевна Ж.</div>
+                        <div class="patient-id">ID: CRD-9264</div>
+                    </div>
+                    <div class="vital-signs">
+                        <div class="vital"><span class="vital-label">ЧСС</span><span class="vital-value">52</span></div>
+                        <div class="vital"><span class="vital-label">АД</span><span class="vital-value">98/64</span></div>
+                        <div class="vital"><span class="vital-label">Сатурация</span><span class="vital-value">94%</span></div>
+                    </div>
+                    <div class="alert-badge">🔔 Брадикардия (порог индивидуальный)</div>
+                </div>
+                <!-- Пациент 5 (критическое событие) -->
+                <div class="patient-row">
+                    <div class="patient-info">
+                        <div class="patient-name">Михаил Дмитриевич П.</div>
+                        <div class="patient-id">ID: CRD-5118</div>
+                    </div>
+                    <div class="vital-signs">
+                        <div class="vital"><span class="vital-label">ЧСС</span><span class="vital-value">28</span></div>
+                        <div class="vital"><span class="vital-label">АД</span><span class="vital-value">86/54</span></div>
+                        <div class="vital"><span class="vital-label">RR-инт.</span><span class="vital-value">2140 мс</span></div>
+                    </div>
+                    <div class="alert-badge critical">🚨 Асистолия > 3с / КРИТИЧЕСКОЕ</div>
+                </div>
+            </div>
+            <div style="padding: 12px 24px 20px; border-top: 1px solid #eff3f9; font-size:0.75rem; color:#6d8aac;">
+                📡 Данные с Edge-шлюзов (буферизация активна) — синхронизация в облако
+            </div>
+        </div>
+
+        <!-- правый блок: интеллектуальные рекомендации + CDSS -->
+        <div class="recommendations-card">
+            <div class="card-header">
+                <h2>🧠 Поддержка врачебных решений</h2>
+                <span>Edge / Cloud гибрид</span>
+            </div>
+            <div class="rec-list">
+                <div class="rec-item">
+                    <div class="rec-icon">⚕️</div>
+                    <div class="rec-content">
+                        <div class="rec-title">⚠️ Высокий риск декомпенсации ХСН (оценка ML)</div>
+                        <div class="rec-desc">Пациент С. (ID 4821): увеличение веса на 1.2 кг за 2 дня, ↓SDNN на 19% — вероятность обострения 92% (SHAP↑).</div>
+                        <div class="rec-meta"><span>📌 Клиническое правило: п.4.2 РКО ХСН</span><span>🔍 Объяснение: SHAP вес +0.34, ВСР +0.28</span></div>
+                    </div>
+                </div>
+                <div class="rec-item">
+                    <div class="rec-icon">📉</div>
+                    <div class="rec-content">
+                        <div class="rec-title">🧬 Эпизод фибрилляции предсердий (detected Edge/Rule Engine)</div>
+                        <div class="rec-desc">Пациент К. (ID 2793) длительность эпизода 11 мин, средняя ЧСС 138. Рекомендована коррекция антикоагулянтной терапии.</div>
+                        <div class="rec-meta"><span>📋 Чувствительность правила 96,2%</span><span>🕒 Задержка 210 мс</span></div>
+                    </div>
+                </div>
+                <div class="rec-item">
+                    <div class="rec-icon">💓</div>
+                    <div class="rec-content">
+                        <div class="rec-title">⚠️ Критическая брадикардия (алгоритм Edge)</div>
+                        <div class="rec-desc">Пациент П. (ID 5118) ЧСС 28 уд/мин, пауза RR 3.2 с — Активирован экстренный протокол, дежурный кардиолог уведомлён.</div>
+                        <div class="rec-meta"><span>⏱ Реакция Edge &lt; 90 мс</span><span>🏥 Эскалация: оповещение отправлено</span></div>
+                    </div>
+                </div>
+                <div class="rec-item">
+                    <div class="rec-icon">📊</div>
+                    <div class="rec-content">
+                        <div class="rec-title">🔄 Анализ вариабельности ритма (Cloud ML)</div>
+                        <div class="rec-desc">У пациентки Ж. (ID 9264) снижение pNN50 до 7%. Прогноз: умеренный риск гипотонии. Мониторить АД.</div>
+                        <div class="rec-meta"><span>🤖 Модель CatBoost AUC=0.961</span><span>📈 Интерпретация через SHAP доступна</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок-заглушка с трендами / графиками (папье-маше) -->
+    <div class="trend-section">
+        <div class="trend-header">
+            <h3>📈 Динамика ключевых показателей (выбранная когорта)</h3>
+            <span style="font-size: 0.75rem; background:#ecf3f9; padding:4px 12px; border-radius:20px;">последние 7 дней</span>
+        </div>
+        <div class="mock-chart">
+            <div style="display:flex; flex-direction: column; align-items:center; gap:6px;"><div class="bar heart" style="height:78px; width:32px;"></div><span style="font-size:0.7rem;">ЧСС</span></div>
+            <div style="display:flex; flex-direction: column; align-items:center; gap:6px;"><div class="bar heart" style="height:112px; width:32px;"></div><span style="font-size:0.7rem;">ВСР</span></div>
+            <div style="display:flex; flex-direction: column; align-items:center; gap:6px;"><div class="bar risk" style="height:45px; width:32px;"></div><span style="font-size:0.7rem;">Ср.АД</span></div>
+            <div style="display:flex; flex-direction: column; align-items:center; gap:6px;"><div class="bar risk" style="height:93px; width:32px;"></div><span style="font-size:0.7rem;">Индекс риска</span></div>
+            <div style="display:flex; flex-direction: column; align-items:center; gap:6px;"><div class="bar heart" style="height:62px; width:32px;"></div><span style="font-size:0.7rem;">Вес (Δ)</span></div>
+        </div>
+        <div style="margin-top: 18px; background:#f6fafe; border-radius: 20px; padding: 12px 18px;">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div><span style="font-weight:600;">🔍 Объяснение прогноза (SHAP)</span><br><span style="font-size:0.75rem;">для пациента M.П.: основной вклад → снижение вариабельности (ΔSDNN = -21 мс) и рост массы тела +1.1 кг/48ч</span></div>
+                <div><span style="font-weight:600;">📋 Правило сработало</span><br><span style="font-size:0.75rem;">Асистолия &gt;3 сек – пункт 5.3 клинических рекомендаций.</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер с техническими метриками распределенной системы -->
+    <div class="footer-note">
+        <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-bottom: 8px;">
+            <span>🔷 Edge gateway (фильтрация + Пан-Томпкинс)</span>
+            <span>📡 MQTT / gRPC + TLS 1.3</span>
+            <span>🧠 ML прогноз (CatBoost) + SHAP explainability</span>
+            <span>⚕️ FHIR интеграция (CDS Hooks)</span>
+        </div>
+        <div>© 2026 — Прототип распределенной системы принятия врачебных решений | СОККД, Самарская область</div>
+        <div style="margin-top: 6px;">*Демонстрационный макет (UI-прототип) — иллюстрирует архитектуру Edge-Cloud и интерфейс врача-кардиолога.</div>
+    </div>
+</div>
+</body>
+</html>
